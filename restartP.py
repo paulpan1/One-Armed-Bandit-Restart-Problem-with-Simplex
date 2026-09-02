@@ -4,7 +4,7 @@ import pandas as pd
 # 1. Αρχικοποίηση AMPL & Φόρτωση του restartP.mod
 ampl = AMPL()
 ampl.read("restartP.mod")  # <-- Αλλαγή σε restartP.mod
-ampl.read_data("data.dat")
+ampl.read_data("RestartData.dat")
 
 # 2. Δυναμικός υπολογισμός d[a,b]
 ampl.eval(
