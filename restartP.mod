@@ -31,5 +31,5 @@ subject to Restart {(a,b) in States}:
 # 2. Περιορισμός για την ενέργεια Continue (με έλεγχο αν οι επόμενες καταστάσεις ανήκουν στο States)
 subject to Continue {(a,b) in States}:
     V[a,b] >= a/(a+b) 
-              + c * (a/(a+b)) * (if (a+1, b) in States then V[a+1,b] else 0)
-              + c * (b/(a+b)) * (if (a, b+1) in States then V[a,b+1] else 0);  #synoriakes 
+              + c *  (if (a+1, b) in States then a/(a+b) * V[a+1,b] else (prior_alpha/(prior_alpha+prior_beta)) * (V[prior_alpha+1,prior_beta]) )
+              + c *  (if (a, b+1) in States then (b/(a+b)) * V[a,b+1] else (prior_beta/(prior_alpha+prior_beta)) * (V[prior_alpha,prior_beta+1] ));  #synoriakes 
