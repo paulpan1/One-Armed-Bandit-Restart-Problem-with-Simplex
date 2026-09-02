@@ -3,7 +3,7 @@ import pandas as pd
 
 # 1. Αρχικοποίηση AMPL & Φόρτωση του restartP.mod
 ampl = AMPL()
-ampl.read("restartP.mod")  # <-- Αλλαγή σε restartP.mod
+ampl.read("restartP.mod")  
 ampl.read_data("RestartData.dat")
 
 # 2. Δυναμικός υπολογισμός d[a,b]
@@ -29,34 +29,52 @@ df = ampl.get_variable("V").get_values().to_pandas().reset_index()
 df.columns = ["a", "b", "V_val"]
 v_dict = {(r["a"], r["b"]): r["V_val"] for _, r in df.iterrows()}
 
-# 5. Υπολογισμός της αξίας RESTART
-# Αξία Restart = η αξία της αρχικής κατάστασης V(prior_alpha, prior_beta)
-val_restart_base = v_dict.get((prior_alpha, prior_beta), 0.0)
-
-# 6. Υπολογισμός πολιτικής (CONTINUE vs RESTART) για κάθε κατάσταση
+# 5. Υπολογισμός πολιτικής (CONTINUE vs RESTART) ακριβώς όπως το AMPL
 actions = []
 val_continues = []
+val_restarts = []
 
 for _, row in df.iterrows():
-  a = int(row["a"])
-  b = int(row["b"])
+    a = int(row["a"])
+    b = int(row["b"])
 
-  # Υπολογισμός αξίας Continue από τη δεξιά πλευρά της Bellman
-  p_success = a / (a + b)
-  p_failure = b / (a + b)
-  v_succ = v_dict.get((a + 1, b), 0.0)
-  v_fail = v_dict.get((a, b + 1), 0.0)
+    # --- Α. Υπολογισμός αξίας CONTINUE (Με τη νέα συνοριακή λογική που ταιριάζει στο .mod) ---
+    p_success = a / (a + b)
+    p_failure = b / (a + b)
+    
+    # Αν η επόμενη κατάσταση Success είναι εντός States παίρνει τη V, αλλιώς του Restart
+    if (a + 1, b) in v_dict:
+        v_succ_term = v_dict[(a + 1, b)]
+    else:
+        v_succ_term = v_dict.get((prior_alpha + 1, prior_beta), 0.0)
 
-  val_continue = p_success + c * p_success * v_succ + c * p_failure * v_fail
-  val_continues.append(val_continue)
+    # Αν η επόμενη κατάσταση Failure είναι εντός States παίρνει τη V, αλλιώς του Restart
+    if (a, b + 1) in v_dict:
+        v_fail_term = v_dict[(a, b + 1)]
+    else:
+        v_fail_term = v_dict.get((prior_alpha, prior_beta + 1), 0.0)
 
-  # Σύγκριση Continue vs Restart (με μικρή ανοχή 1e-6 για στρογγυλοποιήσεις float)
-  if val_continue >= val_restart_base - 1e-6:
-    actions.append("CONTINUE")
-  else:
-    actions.append("RESTART")
+    val_continue = p_success + c * p_success * v_succ_term + c * p_failure * v_fail_term
+    val_continues.append(val_continue)
+
+    # --- Β. Υπολογισμός αξίας RESTART (Χωρίς περιττούς ελέγχους) ---
+    p_restart_succ = prior_alpha / (prior_alpha + prior_beta)
+    p_restart_fail = prior_beta / (prior_alpha + prior_beta)
+    
+    term_succ = v_dict.get((prior_alpha + 1, prior_beta), 0.0)
+    term_fail = v_dict.get((prior_alpha, prior_beta + 1), 0.0)
+
+    val_restart = p_restart_succ + c * p_restart_succ * term_succ + c * p_restart_fail * term_fail
+    val_restarts.append(val_restart)
+
+    # --- Γ. Σύγκριση Continue vs Restart (με μικρή ανοχή 1e-6 για στρογγυλοποιήσεις float) ---
+    if val_continue >= val_restart - 1e-6:
+        actions.append("CONTINUE")
+    else:
+        actions.append("RESTART")
 
 df["Val_Continue"] = val_continues
+df["Val_Restart"] = val_restarts
 df["Action"] = actions
 
 # Δημιουργία δισδιάστατων πινάκων (pivot)
@@ -68,8 +86,8 @@ print("\n--- 1. ΔΙΣΔΙΑΣΤΑΤΟΣ ΠΙΝΑΚΑΣ ΤΙΜΩΝ V(a,b) ---")
 print(matrix_v)
 
 print(
-    f"\n--- 2. ΑΞΙΑ RESTART V({prior_alpha},{prior_beta}):"
-    f" {val_restart_base:.6f} ---"
+    f"\n--- 2. ΑΞΙΑ RESTART ΣΤΗΝ ΑΡΧΙΚΗ ΚΑΤΑΣΤΑΣΗ V({prior_alpha},{prior_beta}):"
+    f" {v_dict.get((prior_alpha, prior_beta), 0.0):.6f} ---"
 )
 
 print("\n--- 3. ΔΙΣΔΙΑΣΤΑΤΟΣ ΠΙΝΑΚΑΣ ΠΟΛΙΤΙΚΗΣ (CONTINUE vs RESTART) ---")
