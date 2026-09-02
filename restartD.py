@@ -7,7 +7,7 @@ from amplpy import AMPL
 # ==============================================================
 ampl = AMPL()
 ampl.read("restartD.mod")  # Ανάγνωση του δυϊκού μοντέλου restart
-ampl.read_data("data.dat")
+ampl.read_data("RestartData.dat")
 
 # ==============================================================
 # 2. ΟΡΙΣΜΟΣ ΑΡΧΙΚΗΣ ΚΑΤΑΝΟΜΗΣ d(a,b) = 1 στο (prior_alpha, prior_beta)
