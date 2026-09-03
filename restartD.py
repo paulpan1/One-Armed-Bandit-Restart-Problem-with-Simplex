@@ -13,6 +13,8 @@ ampl.read_data("RestartData.dat")
 # 2. ΟΡΙΣΜΟΣ ΑΡΧΙΚΗΣ ΚΑΤΑΝΟΜΗΣ d(a,b)
 # ==============================================================
 
+
+
 ampl.eval(
     """
     let {(a,b) in States} d[a,b] := 0.0;
@@ -23,7 +25,9 @@ ampl.eval(
 """
 )
 
+
 ampl.option["solver"] = "highs"
+ampl.option["highs_options"] = "presolve=off"  # <--- ΠΡΟΣΘΗΚΗ
 ampl.solve()
 
 # ==============================================================
@@ -216,4 +220,5 @@ print("\n--- ΑΝΑΛΥΤΙΚΑ PRINTS ---")
 print(f"1. W2 (Συνολικό αθροισμα w_a_b_2)                 : {total_w2:.6f}")
 print(f"2. Σ [x/(x+y) * w(x,y,2)] (Συνολική αμοιβή Continue): {total_continue_reward:.6f}")
 print(f"3. Διαιρέση (Σ / W2) (Μέση αμοιβή ανά μονάδα W2)   : {avg_continue_reward:.6f}")
+
 
